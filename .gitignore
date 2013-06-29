@@ -1,0 +1,15 @@
+*.o
+.deps
+Makefile
+Makefile.in
+acinclude.m4
+aclocal.m4
+autom4te.cache/
+config/
+config.h*
+config.log
+config.status
+configure
+src/my_stdint.h
+src/tivobridge
+stamp-h1

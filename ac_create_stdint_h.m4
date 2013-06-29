@@ -1,60 +1,46 @@
-# By Russ Allbery <rra@stanford.edu>, Stepan Kasal <kasal@ucw.cz>, and 
-# Warren Young <warren@etr-usa.com>
-
-AC_DEFUN([LIB_SOCKET_NSL],
-[
-        AC_SEARCH_LIBS([gethostbyname], [nsl])
-        AC_SEARCH_LIBS([socket], [socket], [], [
-                AC_CHECK_LIB([socket], [socket], [LIBS="-lsocket -lnsl $LIBS"],
-                [], [-lnsl])])
-])
-
-# By Lars Brinkhoff <lars@nocrew.org>
-
-AC_DEFUN([TYPE_SOCKLEN_T],
-[AC_CACHE_CHECK([for socklen_t], ac_cv_type_socklen_t,
-[
-  AC_TRY_COMPILE(
-  [#include <sys/types.h>
-   #include <sys/socket.h>],
-  [socklen_t len = 42; return 0;],
-  ac_cv_type_socklen_t=yes,
-  ac_cv_type_socklen_t=no)
-])
-  if test $ac_cv_type_socklen_t != yes; then
-    AC_DEFINE(socklen_t, int, [Substitute for socklen_t])
-  fi
-])
-
-# By Kaveh Ghazi <ghazi@caip.rutgers.edu>
-
-AC_DEFUN([AC_COMPILE_CHECK_SIZEOF],
-[changequote(<<, >>)dnl
-dnl The name to #define.
-define(<<AC_TYPE_NAME>>, translit(sizeof_$1, [a-z *], [A-Z_P]))dnl
-dnl The cache variable name.
-define(<<AC_CV_NAME>>, translit(ac_cv_sizeof_$1, [ *], [_p]))dnl
-changequote([, ])dnl
-AC_MSG_CHECKING(size of $1)
-AC_CACHE_VAL(AC_CV_NAME,
-[for ac_size in 4 8 1 2 16 $2 ; do # List sizes in rough order of prevalence.
-  AC_TRY_COMPILE([#include "confdefs.h"
-#include <sys/types.h>
-$2
-], [switch (0) case 0: case (sizeof ($1) == $ac_size):;], AC_CV_NAME=$ac_size)
-  if test x$AC_CV_NAME != x ; then break; fi
-done
-])
-if test x$AC_CV_NAME = x ; then
-  AC_MSG_ERROR([cannot determine a size for $1])
-fi
-AC_MSG_RESULT($AC_CV_NAME)
-AC_DEFINE_UNQUOTED(AC_TYPE_NAME, $AC_CV_NAME, [The number of bytes in type $1])
-undefine([AC_TYPE_NAME])dnl
-undefine([AC_CV_NAME])dnl
-])
-
-# By Guido U. Draheim <guidod@gmx.de>
+dnl @synopsis AC_CREATE_STDINT_H [( HEADER-TO-GENERATE [, HEDERS-TO-CHECK])]
+dnl
+dnl the "ISO C9X: 7.18 Integer types <stdint.h>" section requires the
+dnl existence of an include file <stdint.h> that defines a set of
+dnl typedefs, especially uint8_t,int32_t,uintptr_t. Many older
+dnl installations will not provide this file, but some will have the
+dnl very same definitions in <inttypes.h>. In other enviroments we can
+dnl use the inet-types in <sys/types.h> which would define the typedefs
+dnl int8_t and u_int8_t respectivly.
+dnl
+dnl This macros will create a local "_stdint.h" or the headerfile given
+dnl as an argument. In many cases that file will just have a singular
+dnl "#include <stdint.h>" or "#include <inttypes.h>" statement, while
+dnl in other environments it will provide the set of basic 'stdint's
+dnl defined:
+dnl int8_t,uint8_t,int16_t,uint16_t,int32_t,uint32_t,intptr_t,uintptr_t
+dnl int_least32_t.. int_fast32_t.. intmax_t which may or may not rely
+dnl on the definitions of other files, or using the
+dnl AC_COMPILE_CHECK_SIZEOF macro to determine the actual sizeof each
+dnl type.
+dnl
+dnl if your header files require the stdint-types you will want to
+dnl create an installable file mylib-int.h that all your other
+dnl installable header may include. So if you have a library package
+dnl named "mylib", just use
+dnl
+dnl      AC_CREATE_STDINT_H(mylib-int.h)
+dnl
+dnl in configure.in and go to install that very header file in
+dnl Makefile.am along with the other headers (mylib.h) - and the
+dnl mylib-specific headers can simply use "#include <mylib-int.h>" to
+dnl obtain the stdint-types.
+dnl
+dnl Remember, if the system already had a valid <stdint.h>, the
+dnl generated file will include it directly. No need for fuzzy
+dnl HAVE_STDINT_H things...
+dnl
+dnl (note also the newer variant AX_CREATE_STDINT_H of this macro)
+dnl
+dnl @category C
+dnl @author Guido U. Draheim <guidod@gmx.de>
+dnl @version 2003-05-21
+dnl @license GPLWithACException
 
 AC_DEFUN([AC_CREATE_STDINT_H],
 [# ------ AC CREATE STDINT H -------------------------------------
@@ -286,8 +272,7 @@ EOF
 ;;
   *)
     AC_MSG_ERROR([ $ac_cv_sizeof_X dnl
- what is that a system? contact the author, quick! 
-http://ac-archive.sf.net])
+ what is that a system? contact the author, quick! http://ac-archive.sf.net])
     exit 1
 ;;
    esac
@@ -363,8 +348,7 @@ EOF
 
 # plus a default 64-bit for systems that are likely to be 64-bit ready
   case "$ac_cv_sizeof_x:$ac_cv_sizeof_voidp:$ac_cv_sizeof_long" in
-    1:2:8:8) AC_MSG_RESULT(..adding uint64_t default, normal 64-bit 
-system)
+    1:2:8:8) AC_MSG_RESULT(..adding uint64_t default, normal 64-bit system)
 cat >>$ac_stdint_h <<EOF
 /* DEFAULT: */
 /* seen normal 64-bit system, CC has sizeof(long and void*) == 8 bytes */
@@ -517,11 +501,9 @@ AC_MSG_RESULT(... DONE $ac_stdint_h)
 EOF
 ])
 
-# The following macros are written by Brian Smith <brian@smittyware.com>
-
-AC_DEFUN(TVB_ARG_ENABLE,
-[AC_ARG_ENABLE([$1],
-             AC_HELP_STRING([--enable-$1], [use $3 (default: $2)]),
-             ac_cv_use_$1=$enableval, ac_cv_use_$1=$2)
-AC_CACHE_CHECK(whether to use $3, ac_cv_use_$1, ac_cv_use_$1=$2)])
-
+dnl quote from SunOS-5.8 sys/inttypes.h:
+dnl Use at your own risk.  As of February 1996, the committee is squarely
+dnl behind the fixed sized types; the "least" and "fast" types are still being
+dnl discussed.  The probability that the "fast" types may be removed before
+dnl the standard is finalized is high enough that they are not currently
+dnl implemented.
