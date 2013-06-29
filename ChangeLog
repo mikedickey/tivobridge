@@ -1,0 +1,11 @@
+2007-05-09	Brian Smith
+
+	* Changed raw socket code to be more BSD-friendly, and
+	  appropriate compile options added
+	* Added options section to config file
+	* Added network interface filter, for those platforms that
+	  support IP_PKTINFO or IP_RECVIF control messages
+
+2007-02-12	Brian Smith	<brian@smittyware.com>
+
+	* Initial public release

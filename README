@@ -1,0 +1,44 @@
+TiVoBridge is a packet repeater for both the TiVo discovery beacon and (if 
+enabled) Multicast DNS protocols.  It is intended as a way for TiVo boxes 
+and other devices or programs that use either of those (normally 
+single-subnet) protocols to see each other across routers in a complex 
+local network.
+
+When the daemon starts, it opens a raw socket for forwarding, as well as 
+listener sockets for both protocols that it works with.  A configuration 
+file is used to direct packet forwarding operations for both protocols, 
+which may be tailored to fit nearly any network configuration.
+
+Installation
+------------
+Read the INSTALL file for generalized installation instructions.
+
+Multicast DNS
+-------------
+Multicast DNS forwarding is an optional feature of this program, and is 
+not enabled by default.  To enable this protocol, use the --enable-mdns 
+option when running the configure script.
+
+Example Configuration
+---------------------
+An example network configuration, along with match TiVoBridge 
+configuration files, is contained in the file doc/conf-example.txt.
+
+----
+
+TiVoBridge - TiVo/mDNS packet repeater daemon
+Copyright (C) 2006  Brian Smith
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA

@@ -1,0 +1,68 @@
+This example assumes 3 subnets with the following configuration:
+- 10.3.0.0/24 and 10.2.0.0/24 connected by router A with interfaces
+  10.3.0.254 and 10.2.0.1, with 224.0.0.251 routed to 10.3.0.0/24
+- 10.1.0.0/24 and 10.2.0.0/24 connected by router B with interfaces
+  10.1.0.254 and 10.2.0.2, with 224.0.0.251 routed to 10.1.0.0/24
+- Devices on networks 10.3.0.0/24 and 10.1.0.0/24 can communicate
+  freely with each other (no NAT or anything involved)
+- TiVo boxes are located at 10.3.0.15 and 10.1.0.10, with a PC running
+  TiVo desktop at 10.1.0.15
+- Devices using the TiVo beacon and Multicast DNS protocols on those
+  two subnets need to see each other, with no consideration to the
+  one connecting them
+
+TiVo beacon forwarding must use the original source IP, as that is how the 
+receiver will recognize it, so do not use "origin" parameters.  Multicast 
+DNS packets, on the other hand, must be sent from a machine on the same 
+subnet as the receiver to be seen as valid by the receiver.  Multicast 
+responses and announcements contain the IP addresses of the advertisted 
+services, though, so this is not a problem.
+
+On with the examples...
+
+-------
+
+# Router A configuration
+
+[tivo]
+from=10.3.0.0/24
+to=10.2.0.2
+
+[tivo]
+from=10.1.0.0/24
+to=10.3.0.15
+
+[mdns]
+from=10.3.0.0/24
+notfrom=10.3.0.254	# Avoid multicast loops
+origin=10.2.0.1
+to=10.2.0.2
+
+[mdns]
+from=10.2.0.2
+origin=10.3.0.254
+to=224.0.0.251
+
+-------
+
+# Router B configuration
+
+[tivo]
+from=10.1.0.0/24
+to=10.2.0.1
+
+[tivo]
+from=10.3.0.0/24
+to=10.1.0.10
+to=10.1.0.15
+
+[mdns]
+from=10.1.0.0/24
+notfrom=10.1.0.254	# Avoid multicast loops
+origin=10.2.0.2
+to=10.2.0.1
+
+[mdns]
+from=10.2.0.1
+origin=10.1.0.254
+to=224.0.0.251

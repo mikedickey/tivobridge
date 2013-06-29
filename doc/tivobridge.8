@@ -1,0 +1,108 @@
+.\"Copyright 2006-2007 (c) Brian Smith
+.\"Copying and distribution of this file, with or without modification,
+.\"are permitted in any medium without royalty provided the copyright
+.\"notice and this notice are preserved.
+.TH TIVOBRIDGE 8 "7 May 2007"
+.SH NAME
+tivobridge \- TiVo/mDNS packet repeater daemon
+.SH SYNOPSIS
+tivobridge
+[-c config_file] [-f] [-h] [-u username] [-v]
+.SH DESCRIPTION
+.B tivobridge
+is a packet repeater for both the TiVo discovery beacon and (if enabled) 
+Multicast DNS protocols.  It is intended as a way for TiVo boxes and other 
+devices or programs that use either of those (normally single-subnet) 
+protocols to see each other across routers in a complex local network.
+.LP
+When the daemon starts, it opens a raw socket for forwarding, as well as 
+listener sockets for both protocols that it works with.  A configuration 
+file is used to direct packet forwarding operations for both protocols, 
+which may be tailored to fit nearly any network configuration.
+.SH OPTIONS
+.TP
+.BI \-c " config_file"
+Specify an alternate configuration file for TiVoBridge.  The default is 
+\fBtivobridge.conf\fP, located in the system configuration directory.
+.TP
+.B \-f
+Run TiVoBridge in the foreground.  This also enables a debug mode, 
+displaying messages that are written to the system log and those related 
+to packet forwarding activity.
+.TP
+.B \-h
+Display program version and usage information.
+.TP
+.BI \-u " username"
+Specify the user as which the program should run.  If the username is 
+invalid or not specified, \fBnobody\fP is used by default.  TiVoBridge 
+drops root privileges after initialization, and will not run if it cannot.
+.TP 
+.B \-v
+Display program version and copyright.
+.SH CONFIGURATION
+The TiVoBridge configuration file resembles an INI file in its structure, 
+with \fIname\fP=\fIvalue\fP pairs divided into sections.  Each section 
+header and name/value pair is on a line by itself, and blank lines and 
+those starting with # are ignored.
+.LP
+There are currently three possible section headers, \fB[tivo]\fP, 
+\fB[mdns]\fP and \fB[options]\fP, the first two of which correspond to the 
+TiVo beacon and Multicast DNS protocols.  Each non-options section is a 
+packet forwarding "rule", and may occur one or more times in a 
+configuration file with different parameters for each type of forwarding 
+required.  It is possible for multiple forwarding rules to be matched and 
+executed in response to a single incoming packet.
+.LP
+Each forwarding rule contains some or all of the following parameters:
+.TP
+.B from
+IP address or subnet (using CIDR notation) that is compared against an 
+incoming packet's source IP to determine whether or not it should be 
+forwarded.  If none are specified for a particular rule, all packets 
+match.
+.TP
+.B notfrom
+IP address or subnet (using CIDR notation) that is compared against an
+incoming packet's source IP to determine whether or not it should 
+\fInot\fP be forwarded.  A packet is only forwarded if it passes any
+"from" matching and fails to pass any "notfrom" matching.
+.TP
+.B origin
+Source IP address for use when forwarding packets.  There should be only 
+one of these specified in a forwarding rule, if any.  If not specified, 
+the source IP from the incoming packet will be used.
+.TP
+.B to
+Destination IP addresses for packet forwarding.  There may be more than 
+one of these per rule, but there must be at least one for a rule to be 
+considered.
+.LP
+The \fB[options]\fP section contains global configuration options for 
+TiVoBridge.  The following option is currently supported:
+.TP
+.B interface
+IP address of network interface to accept input from.  One or more 
+interfaces may be specifed on separate lines and, if none are specified, 
+TiVoBridge will accept input from any interface.  This option is only 
+meaningful on systems that provide to applications the interface that a 
+packet was received on, such as Linux or BSD.
+.SH SIGNALS
+.TP
+.B SIGHUP
+Force reload of the configuration file.
+.TP
+.B SIGTERM
+Shut down the server.
+.LP
+The result of sending any other signals to the server is undefined.
+.SH FILES
+.TP
+/etc/tivobridge.conf
+Contains configuration data for \fBtivobridge\fP.
+.SH UNRESTRICTIONS
+\fItivobridge\fP is free; anyone may redistribute copies of it to anyone
+under the terms stated in the GNU General Public License, a copy of which
+accompanies each copy of \fItivobridge\fP.
+.SH AUTHOR
+Brian Smith <brian@smittyware.com>
