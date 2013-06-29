@@ -48,6 +48,12 @@
 #include "logger.h"
 #include "cfgfile.h"
 
+#if defined(__APPLE__)
+	#define iphdr ip
+	#define SOL_IP IPPROTO_IP
+#endif
+
+
 #define IP_VERSION 4
 
 static int raw_skt, tivo_sock = -1, mdns_sock = -1;
@@ -434,10 +440,6 @@ static int receive_packet(int sock, void *pBuf, int *pLen,
 
 		cmptr = CMSG_NXTHDR(&msg, cmptr);
 	}
-
-	if (!(ifr.ifr_ifindex = if_index) ||
-		ioctl(sock, SIOCGIFNAME, &ifr) == -1)
-		return 0;
 # elif defined(IP_RECVIF)
 	cmptr = CMSG_FIRSTHDR(&msg);
 	while (cmptr)
@@ -447,8 +449,14 @@ static int receive_packet(int sock, void *pBuf, int *pLen,
 
 		cmptr = CMSG_NXTHDR(&msg, cmptr);
 	}
+# endif
 
+# if defined (__APPLE__) || !defined(IP_PKTINFO)
 	if (!if_index || !if_indextoname(if_index, ifr.ifr_name))
+		return 0;
+# else
+	if (!(ifr.ifr_ifindex = if_index) ||
+		ioctl(sock, SIOCGIFNAME, &ifr) == -1)
 		return 0;
 # endif
 
