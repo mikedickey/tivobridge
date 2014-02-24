@@ -283,6 +283,19 @@ static int create_listeners()
 	addr.sin_port = htons(5353);
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
+
+	oneopt = 1;
+	if (setsockopt(mdns_sock, SOL_SOCKET, SO_REUSEADDR, &oneopt, sizeof(oneopt)) < 0) {
+	    return 0;
+	}
+
+#ifdef SO_REUSEPORT
+	oneopt = 1;
+	if (setsockopt(mdns_sock, SOL_SOCKET, SO_REUSEPORT, &oneopt, sizeof(oneopt)) < 0) {
+	    return 0;
+	}
+#endif
+
 	if (bind(mdns_sock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 		return 0;
 
