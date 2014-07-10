@@ -39,6 +39,7 @@
 
 #include <pwd.h>
 #include <signal.h>
+#include <errno.h>
 
 #include <netinet/ip.h>
 #include <netinet/udp.h>
@@ -87,7 +88,7 @@ static unsigned short checksum(unsigned short* addr,char len)
 	return ~sum;
 }
 
-static void send_packet(const TunnelListEntry *pTunnel, const IPListEntry *pFwd,
+static int send_packet(const TunnelListEntry *pTunnel, const IPListEntry *pFwd,
 	struct in_addr *pSrcIP, int nSrcPort, char *szData, int nLen)
 {
 	int nPort, pkt_len, rc;
@@ -102,20 +103,29 @@ static void send_packet(const TunnelListEntry *pTunnel, const IPListEntry *pFwd,
 	{
 	case TUNNEL_TIVO:	nPort = 2190; break;
 	case TUNNEL_MDNS:	nPort = 5353; break;
-	default:		return;
+	default:
+	    log_message(LOG_ERR, "Unsupported tunnel type");
+        return -1;
 	}
 
 	pkt_len = sizeof(raw_pkt) + nLen - 1;
 	pkt = (raw_pkt*)malloc(pkt_len);
-	if (!pkt)
-		return;
+	if (!pkt) {
+	    log_message(LOG_ERR, "malloc failure");
+		return -1;
+	}
 
 	addrfrom = pTunnel->pOrigin ? pTunnel->pOrigin->nIP : pSrcIP->s_addr;
 
 	pkt->ip.ip_v = IP_VERSION;
 	pkt->ip.ip_hl = sizeof(struct iphdr) >> 2;
 	pkt->ip.ip_tos = 0;
+#if defined(__APPLE__)
+    /* see http://cseweb.ucsd.edu/~braghava/notes/freebsd-sockets.txt */
+	pkt->ip.ip_len = pkt_len;
+#else
 	pkt->ip.ip_len = htons(pkt_len);
+#endif
 	pkt->ip.ip_id = htons(getpid() & 0xffff);
 	pkt->ip.ip_off = 0;
 	pkt->ip.ip_ttl = 0xff;
@@ -133,7 +143,11 @@ static void send_packet(const TunnelListEntry *pTunnel, const IPListEntry *pFwd,
 	memcpy(pkt->data, szData, nLen);
 	rc = sendto(raw_skt, pkt, pkt_len, 0, (struct sockaddr*)&sa,
 		sizeof(sa));
+	if (rc == -1) {
+	    log_message(LOG_ERR, "Unable to send packet", strerror(errno));
+	}
 	free(pkt);
+	return rc;
 }
 
 // Main processing logic
@@ -343,6 +357,8 @@ static int check_addr_filter(const IPListEntry *pList, u_int32_t nIP,
 static void process_tunnels(int nType, struct in_addr *pSrcIP, int nSrcPort,
 	u_char *pData, int nLen)
 {
+    int rc;
+    
 	if (!daemon_mode)
 	{
 		printf(
@@ -378,9 +394,9 @@ static void process_tunnels(int nType, struct in_addr *pSrcIP, int nSrcPort,
 				continue;
 			}
 
-			send_packet(pCur, pFwd, pSrcIP, nSrcPort, pData, nLen);
+			rc = send_packet(pCur, pFwd, pSrcIP, nSrcPort, pData, nLen);
 
-			if (!daemon_mode)
+			if (!daemon_mode && rc > 0)
 			{
 				struct in_addr ip;
 				ip.s_addr = pFwd->nIP;
@@ -487,6 +503,8 @@ static int receive_packet(int sock, void *pBuf, int *pLen,
 
 int main(int argc, char** argv)
 {
+	int oneopt;
+
 	parse_options(argc, argv);
 
 #if HAVE_WORKING_FORK
@@ -503,6 +521,13 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+    /* set IP_HDRINCL, see http://sock-raw.org/papers/sock_raw */
+	oneopt = 1;
+	if (setsockopt(raw_skt, SOL_IP, IP_HDRINCL, &oneopt, sizeof(oneopt)) < 0) {
+		log_message(LOG_ERR, "Can't initialize raw socket");
+		return 1;
+    }
+    
 	if (!create_listeners())
 	{
 		log_message(LOG_ERR, "Can't create listener socket(s)");
